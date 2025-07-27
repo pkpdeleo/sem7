@@ -1,0 +1,51 @@
+// Text-to-Image Generation Flow
+digraph {
+	bgcolor=white rankdir=TB splines=ortho
+	node [fillcolor=gray90 fontname=Helvetica shape=box style="rounded,filled"]
+	edge [fontname=Helvetica fontsize=10]
+	user_input [label="User Input" fillcolor=lightblue shape=ellipse]
+	img1_path [label="Image 1 Path" fillcolor=lightgrey shape=box style="rounded,filled"]
+	img2_path [label="Image 2 Path" fillcolor=lightgrey shape=box style="rounded,filled"]
+	img_kb [label="Image Knowledge Base" fillcolor=lightgrey shape=box style="rounded,filled"]
+	clip [label="CLIP Text Encoder"]
+	embedding [label="Text Embedding" fillcolor=lightyellow shape=diamond]
+	faiss [label="FAISS Index Search"]
+	topk [label="Top K Image Paths" fillcolor=lightyellow shape=diamond]
+	subgraph cluster_0 {
+		color=blue label="IMAGE 1 PREPROCESSING" style=rounded
+		bgcolor=whitesmoke
+		load1 [label="Load Image 1"]
+		midas [label="Midas Depth Preprocessor"]
+		resize_depth [label="Resize Depth Map"]
+		load1 -> midas
+		midas -> resize_depth
+	}
+	subgraph cluster_1 {
+		color=blue label="IMAGE 2 PREPROCESSING" style=rounded
+		bgcolor=whitesmoke
+		load2 [label="Load Image 2"]
+		canny [label="Canny Edge Preprocessor"]
+		resize_canny [label="Resize Canny Map"]
+		load2 -> canny
+		canny -> resize_canny
+	}
+	controlnet [label="SDXL ControlNet Pipeline Base"]
+	latents [label="Generated Latents" fillcolor=lightyellow shape=diamond]
+	refiner [label="SDXL Refiner Pipeline"]
+	vae [label="Decode Latents via VAE"]
+	final_img [label="Final Generated Image" fillcolor=lightblue shape=ellipse]
+	user_input -> clip
+	clip -> embedding
+	embedding -> faiss
+	faiss -> topk
+	img_kb -> faiss
+	topk -> load1 [label=" Path 1" lhead=cluster_0]
+	topk -> load2 [label=" Path 2" lhead=cluster_1]
+	resize_depth -> controlnet [ltail=cluster_0]
+	resize_canny -> controlnet [ltail=cluster_1]
+	user_input -> controlnet [label=" Text Prompt" constraint=false]
+	controlnet -> latents
+	latents -> refiner
+	refiner -> vae
+	vae -> final_img
+}
